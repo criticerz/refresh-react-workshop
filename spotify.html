@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Refresh Miami ReactJS</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.14.7/react.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.14.7/react-dom.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.6.15/browser.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+  </head>
+  <body>
+
+    <div id="example"></div>
+
+    <style>
+      .album {
+        height: 210px;
+        margin-top: 20px;
+        cursor: pointer;
+      }
+      .album.playing {
+        opacity: 0.5;
+      }
+    </style>
+
+    <script type="text/babel">
+      
+      var App = React.createClass({
+
+        audioObject: null,
+
+        getInitialState: function() {
+          return {
+            searchQuery: '',
+            albums: [],
+            currentAlbumPlaying: null
+          }
+        },
+
+        handleChange: function(e) {
+          this.setState({
+            searchQuery: e.target.value
+          });
+        },
+
+        handleKeyPress: function(e) {
+          if( e.key === 'Enter' ) {
+            this.fetchAlbums(this.state.searchQuery);
+          }
+        },
+
+        fetchAlbums: function(query) {
+          var _this = this;
+          $.ajax('https://api.spotify.com/v1/search?q=' + query + '&type=album').done(function(data) {
+            _this.setState({
+              albums: data.albums.items
+            });
+          });
+        },
+
+        handlePlay: function(albumId) {
+
+          if( albumId === this.state.currentAlbumPlaying && this.audioObject !== null ) {
+            this.audioObject.pause();
+            return;
+          }
+
+          var _this = this;
+          
+          $.ajax('https://api.spotify.com/v1/albums/' + albumId).done(function(data) {
+            
+            var tracks = data.tracks.items;
+            var tracks_count = tracks.length;
+            var randomIndex = Math.floor(Math.random() * (tracks_count-1));
+
+            if( _this.audioObject != null ) {
+              _this.audioObject.pause();
+              _this.audioObject = null;
+            } 
+
+            _this.audioObject = new Audio(tracks[randomIndex].preview_url);
+            _this.audioObject.play();
+
+            _this.setState({
+              currentAlbumPlaying: albumId
+            });
+
+          });
+        },
+
+        render: function() {
+
+          var _this = this;
+
+          var renderedAlbums = this.state.albums.map(function(album, index) {
+            return (
+              <div key={index} className={'col-sm-4 album ' + (_this.state.currentAlbumPlaying == album.id ? 'playing' : '')} onClick={_this.handlePlay.bind(_this, album.id)}>
+                <img src={album.images[0].url} style={{width: '100%'}} />
+              </div>
+            );
+          });
+
+          return (
+            <div className="app-wrapper col-sm-7 text-center" style={{float: 'none', marginLeft: 'auto', marginRight: 'auto'}}>
+              <h1>Spotify album search</h1>
+              <p>This is our React workshop sample app. Just type in an album name to display it</p>
+              <input type="text" 
+                className="form-control" 
+                value={this.state.searchQuery}
+                onChange={this.handleChange}
+                onKeyPress={this.handleKeyPress}
+                placeholder="Enter the album name here and press enter.." />
+              <div className="clearfix">
+                {renderedAlbums}
+              </div>
+            </div>
+          )
+        }
+      });
+
+      ReactDOM.render(
+        <App/>,
+        document.getElementById('example')
+      );
+
+    </script>
+    
+  </body>
+</html>
